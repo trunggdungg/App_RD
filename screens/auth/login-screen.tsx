@@ -15,6 +15,8 @@ import TextField from '@/components/text-field';
 import AppButton  from '@/components/button';
 import AppColors  from '@/constants/app-colors';
 
+import { authService, storageService, keychainService  } from '@/services';
+
 interface Props {
   onLoginSuccess?: () => void;
 }
@@ -27,6 +29,19 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
     username?: string;
     password?: string;
   }>({});
+
+
+  useEffect(() => {
+    loadSavedCredentials();
+  }, []);
+
+  const loadSavedCredentials = async () => {
+    const credentials = await keychainService.getCredentials();
+    if (credentials) {
+      setUsername(credentials.username);
+      setPassword(credentials.password);
+    }
+  };
 
   // Load credentials đã lưu từ lần đăng nhập trước
   useEffect(() => {
@@ -48,27 +63,27 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
     return Object.keys(e).length === 0;
   };
 
-  const handleLogin = async () => {
+   const handleLogin = async () => {
     if (!validate()) return;
 
     setLoading(true);
     try {
-      // ── Tạm thời giả lập gọi API ──────────────────────
-      // Sau này thay bằng: const result = await authService.login(...)
-      await new Promise(r => setTimeout(r, 1000));
-      const loginSuccess = true; // giả sử luôn thành công
-      // ────────────────────────────────────────────────────
+      const result = await authService.login({
+        username: username.trim(),
+        password,
+      });
 
-      if (loginSuccess) {
-        // Lưu credentials (thay thế keychainService của repo gốc)
-        await SecureStore.setItemAsync('saved_username', username.trim());
-        await SecureStore.setItemAsync('saved_password', password);
+      if (result.success && result.data) {
+        // Save tokens
+        await storageService.setToken(result.data.token);
+        await storageService.setRefreshToken(result.data.refreshToken);
 
-        if (onLoginSuccess) {
-            onLoginSuccess();
-        }
+        // Save credentials to keychain
+        await keychainService.saveCredentials(username.trim(), password);
+
+        onLoginSuccess?.();
       } else {
-        Alert.alert('Lỗi', 'Đăng nhập thất bại');
+        Alert.alert('Lỗi', result.error || 'Đăng nhập thất bại');
       }
     } catch {
       Alert.alert('Lỗi', 'Đã xảy ra lỗi. Vui lòng thử lại.');
