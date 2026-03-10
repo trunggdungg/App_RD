@@ -1,5 +1,5 @@
 // services/api.ts
-
+import { authManager } from './auth-manager';
 const BASE_URL = 'http://14.252.164.238:8080';
 
 interface ApiResponse<T> {
@@ -30,7 +30,17 @@ export const api = {
       });
 
       if (!response.ok) {
-        // Parse lỗi từ server trả về
+        if (response.status === 401) {
+          if (token) {
+            authManager.handleTokenExpired();
+          }
+
+          const errorData = await response.json().catch(() => ({}));
+          return {
+            error: errorData.message || 'Unauthorized',
+          };
+        }
+
         const errorData = await response.json().catch(() => ({}));
         return {
           error: errorData.message || `Lỗi HTTP: ${response.status}`,
@@ -66,6 +76,17 @@ export const api = {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          if (token) {
+            authManager.handleTokenExpired();
+          }
+
+          const errorData = await response.json().catch(() => ({}));
+          return {
+            error: errorData.message || 'Unauthorized',
+          };
+        }
+
         const errorData = await response.json().catch(() => ({}));
         return {
           error: errorData.message || `Lỗi HTTP: ${response.status}`,

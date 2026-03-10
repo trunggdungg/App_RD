@@ -1,5 +1,5 @@
 // services/auth-service.ts
-import api from './api';
+import {api} from './api';
 
 // Kiểu dữ liệu gửi lên
 export interface LoginRequest {
